@@ -1,337 +1,154 @@
-let trendChart;
-let regionChart;
+/* ============================================================
+   CHARTS — light theme
+   ============================================================ */
 
+Chart.defaults.font.family = "JetBrains Mono, monospace";
+Chart.defaults.font.size = 10;
+Chart.defaults.color = "#748696";
 
-const chartText = "#78909c";
-const chartGrid = "rgba(55,78,90,0.32)";
-const chartBlue = "#70c5dc";
+const GRID_LINE = "rgba(120,145,165,.14)";
 
+let trendChartInstance = null;
+let regionChartInstance = null;
 
+/* ---------- trend ------------------------------------------ */
 function renderTrendChart(points) {
-
-  const canvas =
-    document.getElementById("trendChart");
-
+  const canvas = document.getElementById("trendChart");
   if (!canvas) return;
+  if (trendChartInstance) trendChartInstance.destroy();
 
-  if (trendChart) {
-    trendChart.destroy();
-  }
-
-
-  trendChart = new Chart(canvas, {
-
+  trendChartInstance = new Chart(canvas, {
     type: "line",
-
     data: {
-
-      labels:
-        points.map(point => "D" + point.x),
-
+      labels: points.map(p => "D" + String(p.x).padStart(2, "0")),
       datasets: [{
-
-        data:
-          points.map(point => point.y),
-
-        borderColor: chartBlue,
-
-        backgroundColor:
-          "rgba(112,197,220,0.08)",
-
-        borderWidth: 1.7,
-
-        pointRadius: 2,
-
-        pointHoverRadius: 4,
-
-        pointBackgroundColor: chartBlue,
-
-        pointBorderWidth: 0,
-
+        data: points.map(p => +(p.y * 100).toFixed(1)),
+        borderColor: "#0ea5b7",
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 140);
+          g.addColorStop(0, "rgba(14,165,183,.22)");
+          g.addColorStop(1, "rgba(14,165,183,0)");
+          return g;
+        },
         fill: true,
-
-        tension: 0.3
-
-      }]
-
+        tension: 0.38,
+        borderWidth: 1.8,
+        pointRadius: 2.6,
+        pointHoverRadius: 4.5,
+        pointBackgroundColor: "#fff",
+        pointBorderColor: "#0ea5b7",
+        pointBorderWidth: 2,
+      }],
     },
-
     options: {
-
       responsive: true,
-
       maintainAspectRatio: false,
-
       plugins: {
-
-        legend: {
-          display: false
-        },
-
+        legend: { display: false },
         tooltip: {
-
+          backgroundColor: "#0a1e2e",
+          padding: 10,
+          titleFont: { size: 10 },
+          bodyFont: { size: 11 },
           displayColors: false,
-
-          backgroundColor: "#09151d",
-
-          borderColor: "#29414e",
-
-          borderWidth: 1,
-
-          titleFont: {
-            family: "JetBrains Mono",
-            size: 9
-          },
-
-          bodyFont: {
-            family: "JetBrains Mono",
-            size: 9
-          },
-
-          callbacks: {
-
-            label: context => {
-
-              return (
-                " confidence: " +
-                (context.raw * 100).toFixed(1) +
-                "%"
-              );
-
-            }
-
-          }
-
-        }
-
-      },
-
-      scales: {
-
-        y: {
-
-          min: 0,
-
-          max: 1,
-
-          border: {
-            display: false
-          },
-
-          ticks: {
-
-            color: chartText,
-
-            font: {
-              family: "JetBrains Mono",
-              size: 7
-            },
-
-            callback: value =>
-              (value * 100) + "%",
-
-            maxTicksLimit: 4
-
-          },
-
-          grid: {
-            color: chartGrid
-          }
-
+          callbacks: { label: (c) => `Confidence: ${c.parsed.y}%` },
         },
-
-        x: {
-
-          border: {
-            display: false
-          },
-
-          ticks: {
-
-            color: chartText,
-
-            font: {
-              family: "JetBrains Mono",
-              size: 7
-            }
-
-          },
-
-          grid: {
-            display: false
-          }
-
-        }
-
-      }
-
-    }
-
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false },
+             ticks: { font: { size: 9 }, color: "#9aa9b6" } },
+        y: {
+          min: 0, max: 100,
+          grid: { color: GRID_LINE },
+          border: { display: false },
+          ticks: { font: { size: 9 }, color: "#9aa9b6",
+                   callback: (v) => v + "%", stepSize: 25 },
+        },
+      },
+    },
   });
 }
 
-
-function renderRegionChart(rows) {
-
-  const canvas =
-    document.getElementById("regionChart");
-
+/* ---------- region profile --------------------------------- */
+function renderRegionChart(byLeadDay) {
+  const canvas = document.getElementById("regionChart");
   if (!canvas) return;
+  if (regionChartInstance) regionChartInstance.destroy();
 
-  if (regionChart) {
-    regionChart.destroy();
-  }
+  const days = byLeadDay.map(r => "Day " + String(r.lead_day).padStart(2, "0"));
+  const bust = byLeadDay.map(r => +(Number(r.mean_bust_probability || 0) * 100).toFixed(1));
+  const conf = byLeadDay.map(r => +(Number(r.mean_confidence || 0) * 100).toFixed(1));
 
-
-  regionChart = new Chart(canvas, {
-
+  regionChartInstance = new Chart(canvas, {
     type: "bar",
-
     data: {
-
-      labels:
-        rows.map(row => "D" + row.lead_day),
-
-      datasets: [{
-
-        data:
-          rows.map(row =>
-            Number(row.mean_bust_probability) || 0
-          ),
-
-        backgroundColor:
-          rows.map(row => {
-
-            const probability =
-              Number(row.mean_bust_probability) || 0;
-
-            if (probability >= 0.55) {
-              return "#df716c";
-            }
-
-            if (probability >= 0.30) {
-              return "#d6aa5f";
-            }
-
-            return "#61c492";
-
-          }),
-
-        borderWidth: 0,
-
-        borderRadius: 2,
-
-        barPercentage: 0.58,
-
-        categoryPercentage: 0.75
-
-      }]
-
+      labels: days,
+      datasets: [
+        {
+          label: "Bust probability",
+          data: bust,
+          backgroundColor: (ctx) => {
+            const v = ctx.parsed?.y ?? 0;
+            if (v >= 60) return "rgba(220,38,38,.72)";
+            if (v >= 40) return "rgba(234,88,12,.72)";
+            if (v >= 25) return "rgba(234,179,8,.72)";
+            return "rgba(14,165,183,.65)";
+          },
+          borderRadius: 5,
+          borderSkipped: false,
+          barPercentage: 0.55,
+          order: 2,
+        },
+        {
+          label: "Confidence",
+          type: "line",
+          data: conf,
+          borderColor: "#16a34a",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          borderDash: [5, 4],
+          tension: 0.35,
+          pointRadius: 3,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: "#16a34a",
+          pointBorderWidth: 2,
+          order: 1,
+        },
+      ],
     },
-
     options: {
-
       responsive: true,
-
       maintainAspectRatio: false,
-
+      interaction: { mode: "index", intersect: false },
       plugins: {
-
         legend: {
-          display: false
+          position: "top", align: "end",
+          labels: {
+            color: "#485d70",
+            boxWidth: 10, boxHeight: 10,
+            padding: 16,
+            font: { size: 10.5, family: "Inter" },
+            usePointStyle: true, pointStyle: "rectRounded",
+          },
         },
-
         tooltip: {
-
-          displayColors: false,
-
-          backgroundColor: "#09151d",
-
-          borderColor: "#29414e",
-
-          borderWidth: 1,
-
-          titleFont: {
-            family: "JetBrains Mono",
-            size: 9
-          },
-
-          bodyFont: {
-            family: "JetBrains Mono",
-            size: 9
-          },
-
-          callbacks: {
-
-            label: context =>
-              " bust probability: " +
-              (context.raw * 100).toFixed(1) +
-              "%"
-
-          }
-
-        }
-
-      },
-
-      scales: {
-
-        y: {
-
-          min: 0,
-
-          max: 1,
-
-          border: {
-            display: false
-          },
-
-          ticks: {
-
-            color: chartText,
-
-            font: {
-              family: "JetBrains Mono",
-              size: 8
-            },
-
-            callback: value =>
-              (value * 100) + "%"
-
-          },
-
-          grid: {
-            color: chartGrid
-          }
-
+          backgroundColor: "#0a1e2e",
+          padding: 12,
+          titleFont: { size: 11 },
+          bodyFont: { size: 11 },
+          callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y}%` },
         },
-
-        x: {
-
-          border: {
-            display: false
-          },
-
-          ticks: {
-
-            color: chartText,
-
-            font: {
-              family: "JetBrains Mono",
-              size: 8
-            }
-
-          },
-
-          grid: {
-            display: false
-          }
-
-        }
-
-      }
-
-    }
-
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false },
+             ticks: { font: { size: 10 }, color: "#748696" } },
+        y: {
+          min: 0, max: 100,
+          grid: { color: GRID_LINE },
+          border: { display: false },
+          ticks: { callback: (v) => v + "%", stepSize: 20, color: "#9aa9b6" },
+        },
+      },
+    },
   });
 }

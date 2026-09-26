@@ -1,667 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reliability Intelligence · Forecast Bust Detection</title>
 
-  <title>Forecast Intelligence — SIH 26079</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
-    rel="stylesheet"
-  >
-
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
-  >
-
-  <link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-<div class="app-shell">
-
-  <!-- =====================================================
-       SIDEBAR
-       ===================================================== -->
-
-  <aside class="sidebar">
-
+<!-- ============================ TOP BAR ============================ -->
+<header class="topbar">
+  <div class="topbar-left">
     <div class="brand">
-
       <div class="brand-mark">
-        <span></span>
-        <span></span>
-        <span></span>
+        <svg viewBox="0 0 36 36" width="34" height="34">
+          <defs>
+            <linearGradient id="bm" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0ea5b7"/>
+              <stop offset="100%" stop-color="#0d4a6e"/>
+            </linearGradient>
+          </defs>
+          <circle cx="18" cy="18" r="16" fill="url(#bm)" opacity=".12"/>
+          <circle cx="18" cy="18" r="16" fill="none" stroke="url(#bm)" stroke-width="1.2"/>
+          <path d="M9 24 Q18 5 27 24" fill="none" stroke="url(#bm)" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M12 22 Q18 12 24 22" fill="none" stroke="url(#bm)" stroke-width="1.4" stroke-linecap="round" opacity=".6"/>
+          <circle cx="18" cy="24" r="1.7" fill="#0ea5b7"/>
+        </svg>
       </div>
-
-      <div>
-        <div class="brand-name">FORECAST</div>
-        <div class="brand-sub">BUST DETECTION</div>
+      <div class="brand-text">
+        <div class="brand-name">Reliability Intelligence</div>
+        <div class="brand-sub">NCMRWF · Medium-Range Forecast Bust Detection</div>
       </div>
-
     </div>
+  </div>
 
-    <div class="project-code">
-      SIH 26079
+  <nav class="tabs" id="mainTabs">
+    <button class="tab active" data-tab="map"><span class="tab-ico">◆</span><span>Confidence Map</span></button>
+    <button class="tab" data-tab="bust"><span class="tab-ico">◆</span><span>Regional Risk</span></button>
+    <button class="tab" data-tab="regions"><span class="tab-ico">◆</span><span>Error-Prone Areas</span></button>
+    <button class="tab" data-tab="trust"><span class="tab-ico">◆</span><span>Model Diagnostics</span></button>
+  </nav>
+
+  <div class="topbar-right">
+    <div class="status-chip" id="statusChip">
+      <span class="status-dot" id="connDot"></span>
+      <span id="connText">Connecting…</span>
     </div>
-
-    <nav class="side-nav">
-
-      <button class="side-link active" data-tab="map">
-        <span class="nav-index">01</span>
-        <span>Confidence Map</span>
-      </button>
-
-      <button class="side-link" data-tab="bust">
-        <span class="nav-index">02</span>
-        <span>Regional Risk</span>
-      </button>
-
-      <button class="side-link" data-tab="regions">
-        <span class="nav-index">03</span>
-        <span>Error-Prone Areas</span>
-      </button>
-
-      <button class="side-link" data-tab="trust">
-        <span class="nav-index">04</span>
-        <span>Model Diagnostics</span>
-      </button>
-
-    </nav>
-
-    <div class="sidebar-bottom">
-
-      <div class="system-status">
-        <span class="status-light" id="connDot"></span>
-
-        <div>
-          <div class="status-title">SYSTEM STATUS</div>
-          <div class="status-value" id="connText">
-            Connecting...
-          </div>
-        </div>
-      </div>
-
-      <div class="sidebar-meta">
-        NCMRWF<br>
-        MEDIUM-RANGE FORECAST<br>
-        DAY 01 — DAY 10
-      </div>
-
-    </div>
-
-  </aside>
-
-
-  <!-- =====================================================
-       MAIN APPLICATION
-       ===================================================== -->
-
-  <main class="workspace">
-
-    <!-- HEADER -->
-
-    <header class="topbar">
-
-      <div class="page-heading">
-
-        <div class="eyebrow">
-          WEATHER FORECAST INTELLIGENCE
-        </div>
-
-        <h1 id="pageTitle">
-          Regional Forecast Confidence
-        </h1>
-
-        <p id="pageDescription">
-          Spatial assessment of forecast bust probability across the monitored domain.
-        </p>
-
-      </div>
-
-      <div class="top-meta">
-
-        <div class="meta-block">
-          <span class="meta-label">DOMAIN</span>
-          <strong>INDIA</strong>
-        </div>
-
-        <div class="meta-divider"></div>
-
-        <div class="meta-block">
-          <span class="meta-label">HORIZON</span>
-          <strong>10 DAYS</strong>
-        </div>
-
-        <div class="meta-divider"></div>
-
-        <div class="meta-block">
-          <span class="meta-label">GRID</span>
-          <strong>1° × 1°</strong>
-        </div>
-
-      </div>
-
-    </header>
-
-
-    <!-- =====================================================
-         MAP TAB
-         ===================================================== -->
-
-    <section class="view active" id="tab-map">
-
-      <div class="map-layout">
-
-        <!-- MAP -->
-
-        <section class="map-panel">
-
-          <div class="map-toolbar">
-
-            <div class="toolbar-left">
-
-              <div class="live-marker">
-                <span></span>
-                BACKTEST VIEW
-              </div>
-
-              <div class="toolbar-separator"></div>
-
-              <div class="selected-day">
-                DAY <strong id="activeDayLabel">05</strong>
-              </div>
-
-            </div>
-
-            <div class="toolbar-right">
-
-              <span class="toolbar-note">
-                CONFIDENCE FIELD
-              </span>
-
-              <div class="legend-inline">
-                <span>
-                  <i class="legend-dot low"></i>
-                  HIGH
-                </span>
-
-                <span>
-                  <i class="legend-dot medium"></i>
-                  MODERATE
-                </span>
-
-                <span>
-                  <i class="legend-dot high"></i>
-                  LOW
-                </span>
-              </div>
-
-            </div>
-
-          </div>
-
-          <div id="map"></div>
-
-
-          <!-- FLOATING MAP INFO -->
-
-          <div class="map-overlay top-left-overlay">
-
-            <div class="overlay-label">
-              SELECTED LEAD
-            </div>
-
-            <div class="overlay-value">
-              DAY <span id="overlayDay">05</span>
-            </div>
-
-            <div class="overlay-sub">
-              MEDIUM-RANGE FORECAST
-            </div>
-
-          </div>
-
-
-          <div class="map-overlay bottom-left-overlay">
-
-            <div class="map-stat">
-              <span>MONITORED</span>
-              <strong id="kpiRegions">—</strong>
-            </div>
-
-            <div class="map-stat">
-              <span>AVG CONFIDENCE</span>
-              <strong id="kpiConf">—</strong>
-            </div>
-
-            <div class="map-stat danger">
-              <span>HIGH RISK</span>
-              <strong id="kpiHigh">—</strong>
-            </div>
-
-          </div>
-
-        </section>
-
-
-        <!-- RIGHT ANALYSIS PANEL -->
-
-        <aside class="analysis-panel">
-
-          <div class="analysis-header">
-
-            <div>
-              <span class="section-kicker">FORECAST WINDOW</span>
-              <h2>Lead Time</h2>
-            </div>
-
-            <div class="day-readout">
-              <span>DAY</span>
-              <strong id="sideDay">05</strong>
-            </div>
-
-          </div>
-
-
-          <!-- DAY SELECTOR -->
-
-          <div class="day-selector" id="leadStrip"></div>
-
-
-          <!-- CURRENT CONFIDENCE -->
-
-          <div class="confidence-display">
-
-            <div class="confidence-top">
-
-              <div>
-                <span class="section-kicker">
-                  NATIONAL MEAN
-                </span>
-
-                <div class="confidence-number" id="sideConfidence">
-                  —%
-                </div>
-              </div>
-
-              <div class="confidence-badge" id="confidenceBadge">
-                MONITOR
-              </div>
-
-            </div>
-
-            <div class="confidence-meter">
-              <div
-                class="confidence-meter-fill"
-                id="confidenceMeter"
-              ></div>
-            </div>
-
-            <div class="confidence-foot">
-              <span>FORECAST CONFIDENCE</span>
-              <span>0 — 100%</span>
-            </div>
-
-          </div>
-
-
-          <!-- QUICK METRICS -->
-
-          <div class="quick-metrics">
-
-            <div class="quick-metric">
-              <span>MODEL PR-AUC</span>
-              <strong id="kpiPR">—</strong>
-            </div>
-
-            <div class="quick-metric">
-              <span>MODEL ROC-AUC</span>
-              <strong id="kpiROC">—</strong>
-            </div>
-
-          </div>
-
-
-          <!-- NATIONAL TREND -->
-
-          <div class="side-chart">
-
-            <div class="chart-heading">
-              <div>
-                <span class="section-kicker">OUTLOOK</span>
-                <h3>Confidence by lead day</h3>
-              </div>
-            </div>
-
-            <canvas id="trendChart"></canvas>
-
-          </div>
-
-
-          <div class="panel-note">
-            Confidence is calculated as
-            <strong>1 − bust probability</strong>.
-          </div>
-
-        </aside>
-
-      </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         REGIONAL RISK
-         ===================================================== -->
-
-    <section class="view" id="tab-bust">
-
-      <div class="content-grid">
-
-        <div class="content-main">
-
-          <div class="section-header">
-
-            <div>
-              <span class="section-kicker">REGIONAL ANALYSIS</span>
-              <h2>Bust Probability Profile</h2>
-              <p>
-                Inspect how predicted forecast uncertainty changes across
-                the 10-day lead window.
-              </p>
-            </div>
-
-            <div class="region-selector-wrap">
-
-              <label for="regionSelect">
-                REGION
-              </label>
-
-              <select id="regionSelect"></select>
-
-            </div>
-
-          </div>
-
-
-          <div class="large-chart-panel">
-
-            <div class="chart-panel-header">
-
-              <div>
-                <span class="section-kicker">PROBABILITY PROFILE</span>
-                <h3>Day 01 → Day 10</h3>
-              </div>
-
-              <div class="chart-legend">
-                <span class="risk-dot"></span>
-                BUST PROBABILITY
-              </div>
-
-            </div>
-
-            <canvas id="regionChart"></canvas>
-
-          </div>
-
-        </div>
-
-
-        <aside class="explanation-panel">
-
-          <div class="explanation-header">
-
-            <span class="section-kicker">
-              MODEL EXPLANATION
-            </span>
-
-            <h2>Why this region?</h2>
-
-          </div>
-
-          <div class="selected-region-box">
-
-            <span>SELECTED LEAD</span>
-
-            <strong>
-              DAY <span id="explainDay">05</span>
-            </strong>
-
-          </div>
-
-          <div
-            class="reason-box"
-            id="reasonBox"
-          >
-            Select a region to inspect the model explanation.
-          </div>
-
-        </aside>
-
-      </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         ERROR PRONE REGIONS
-         ===================================================== -->
-
-    <section class="view" id="tab-regions">
-
-      <div class="content-grid single">
-
-        <div class="content-main">
-
-          <div class="section-header">
-
-            <div>
-              <span class="section-kicker">SPATIAL ERROR ANALYSIS</span>
-
-              <h2>Regions with Elevated Forecast Error</h2>
-
-              <p>
-                Regions ordered by their observed and predicted bust behaviour
-                across the validation period.
-              </p>
-            </div>
-
-            <div class="table-summary">
-              <span>VALIDATION ANALYSIS</span>
-              <strong>CHRONOLOGICAL HOLDOUT</strong>
-            </div>
-
-          </div>
-
-
-          <div class="table-panel">
-
-            <table>
-
-              <thead>
-
-                <tr>
-                  <th>Region</th>
-                  <th>Actual bust rate</th>
-                  <th>Predicted probability</th>
-                  <th>Mean error</th>
-                </tr>
-
-              </thead>
-
-              <tbody id="regionTableBody"></tbody>
-
-            </table>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         MODEL DIAGNOSTICS
-         ===================================================== -->
-
-    <section class="view" id="tab-trust">
-
-      <div class="diagnostics-grid">
-
-        <!-- PERFORMANCE -->
-
-        <section class="diagnostic-panel">
-
-          <div class="section-header compact">
-
-            <div>
-              <span class="section-kicker">
-                VALIDATION
-              </span>
-
-              <h2>Model Performance</h2>
-
-              <p>
-                Chronological validation metrics from the trained model.
-              </p>
-            </div>
-
-          </div>
-
-          <div class="metric-grid" id="trustGrid"></div>
-
-        </section>
-
-
-        <!-- FEATURE IMPORTANCE -->
-
-        <section class="diagnostic-panel">
-
-          <div class="section-header compact">
-
-            <div>
-              <span class="section-kicker">
-                MODEL INTERPRETATION
-              </span>
-
-              <h2>Feature Importance</h2>
-
-              <p>
-                Relative contribution of the input variables used by the classifier.
-              </p>
-            </div>
-
-          </div>
-
-          <div
-            id="featureImportance"
-            class="feature-list"
-          ></div>
-
-        </section>
-
-      </div>
-
-
-      <!-- METHODOLOGY -->
-
-      <section class="methodology">
-
-        <div class="methodology-heading">
-
-          <span class="section-kicker">
-            METHODOLOGY
-          </span>
-
-          <h2>How to read this system</h2>
-
-        </div>
-
-        <div class="methodology-grid">
-
-          <div class="method-item">
-
-            <span class="method-number">01</span>
-
-            <div>
-              <strong>Forecast input</strong>
-              <p>
-                Numerical weather prediction fields are transformed
-                into region-level forecast features.
-              </p>
-            </div>
-
-          </div>
-
-          <div class="method-item">
-
-            <span class="method-number">02</span>
-
-            <div>
-              <strong>Error detection</strong>
-              <p>
-                The model estimates the probability that the forecast
-                will exceed the defined bust threshold.
-              </p>
-            </div>
-
-          </div>
-
-          <div class="method-item">
-
-            <span class="method-number">03</span>
-
-            <div>
-              <strong>Confidence field</strong>
-              <p>
-                Bust probability is converted into an interpretable
-                forecast confidence value.
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-
-      </section>
-
-    </section>
-
-  </main>
-
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+
+<!-- ============================ KPI STRIP ============================ -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <div class="kpi-label">MONITORED CELLS</div>
+    <div class="kpi-value" id="kpiRegions">—</div>
+    <div class="kpi-sub">across India</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">MEAN CONFIDENCE</div>
+    <div class="kpi-value" id="kpiConf">—</div>
+    <div class="kpi-sub" id="kpiConfTag">—</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">HIGH-RISK CELLS</div>
+    <div class="kpi-value danger" id="kpiHigh">—</div>
+    <div class="kpi-sub">P(bust) &gt; 0.5</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">ACTIVE LEAD</div>
+    <div class="kpi-value">D<span id="kpiLead">05</span></div>
+    <div class="kpi-sub">of D01 – D10</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">MODEL</div>
+    <div class="kpi-value small">NCUM–G</div>
+    <div class="kpi-sub">PR-AUC <span id="kpiPRSmall">—</span></div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">CYCLE</div>
+    <div class="kpi-value small" id="kpiCycle">00Z</div>
+    <div class="kpi-sub" id="kpiValid">—</div>
+  </div>
 </div>
 
 
+<!-- ============================ MAIN ============================ -->
+<main class="workspace">
+
+  <!-- ================= VIEW: CONFIDENCE MAP ================= -->
+  <section class="view active" id="view-map">
+    <div class="map-layout">
+
+      <section class="map-card">
+        <div class="map-header">
+          <div class="map-header-left">
+            <div class="map-title">
+              <span class="section-kicker">Forecast Confidence Field</span>
+              <h2>Regional confidence · <span id="activeDayLabel">Day 05</span></h2>
+            </div>
+          </div>
+        </div>
+
+        <div class="map-wrap">
+          <div id="map"></div>
+
+          <!-- Legend -->
+          <div class="legend" id="mapLegend">
+            <div class="legend-title">Forecast Confidence (%)</div>
+            <div class="legend-scale">
+              <div class="legend-bar"></div>
+              <div class="legend-ticks">
+                <span>0</span><span>30</span><span>45</span><span>60</span><span>75</span><span>100</span>
+              </div>
+            </div>
+            <div class="legend-labels">
+              <span class="lg critical">Critical</span>
+              <span class="lg elevated">Elevated</span>
+              <span class="lg moderate">Moderate</span>
+              <span class="lg good">Good</span>
+              <span class="lg excellent">Excellent</span>
+            </div>
+            <div class="legend-src">Boundaries · datameet / geohacker</div>
+          </div>
+
+          <!-- Loading -->
+          <div class="map-loading" id="mapLoading">
+            <div class="spinner"></div>
+            <span>Loading state boundaries…</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <div class="panel-block">
+          <div class="panel-head">
+            <span class="section-kicker">Forecast Window</span>
+            <h3>Lead Time Selector</h3>
+          </div>
+          <div class="lead-grid" id="leadStrip"></div>
+        </div>
+
+        <div class="panel-block national">
+          <div class="national-head">
+            <span class="section-kicker">National Mean</span>
+            <div class="national-badge" id="confidenceBadge">MONITOR</div>
+          </div>
+          <div class="national-value" id="sideConfidence">—%</div>
+          <div class="national-meter">
+            <div class="national-meter-fill" id="confidenceMeter"></div>
+          </div>
+          <div class="national-foot">
+            <span>Forecast confidence</span>
+            <span>D<span id="sideDay">05</span></span>
+          </div>
+        </div>
+
+        <div class="panel-block chart">
+          <div class="panel-head">
+            <span class="section-kicker">Outlook</span>
+            <h3>Confidence by lead day</h3>
+          </div>
+          <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="panel-block alert-block">
+          <div class="section-kicker">Operational Flag</div>
+          <div class="alert-body" id="alertBody">Monitoring domain…</div>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+
+  <!-- ================= VIEW: REGIONAL RISK ================= -->
+  <section class="view" id="view-bust">
+    <div class="split-layout">
+      <div class="split-main">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <span class="section-kicker">Regional Analysis</span>
+              <h2>Bust Probability Profile</h2>
+              <p>Evolution of P(bust) and confidence across D01 → D10 for a single grid cell.</p>
+            </div>
+            <div class="region-pick">
+              <label>Region</label>
+              <select id="regionSelect"></select>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="regionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <aside class="split-side">
+        <div class="card exp-card">
+          <div class="card-head compact">
+            <span class="section-kicker">Model Explanation</span>
+            <h3>Why this region?</h3>
+          </div>
+          <div class="exp-lead">
+            <span>Selected lead</span>
+            <strong>Day <span id="explainDay">05</span></strong>
+          </div>
+          <div class="exp-body" id="reasonBox">
+            <div class="exp-empty">Select a region to inspect the model explanation.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+
+  <!-- ================= VIEW: ERROR-PRONE AREAS ================= -->
+  <section class="view" id="view-regions">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <span class="section-kicker">Spatial Error Analysis</span>
+          <h2>Regions with Elevated Forecast Error</h2>
+          <p>Grid cells ranked by predicted bust probability across the validation window.</p>
+        </div>
+        <div class="head-meta">
+          <span>Validation</span>
+          <strong>Chronological holdout</strong>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="region-table">
+          <thead>
+            <tr>
+              <th style="width:52px">#</th>
+              <th>Region ID</th>
+              <th>Lat / Lon</th>
+              <th>Actual bust rate</th>
+              <th>Predicted P(bust)</th>
+              <th>Mean error</th>
+              <th>Risk tier</th>
+            </tr>
+          </thead>
+          <tbody id="regionTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= VIEW: MODEL DIAGNOSTICS ================= -->
+  <section class="view" id="view-trust">
+    <div class="diag-grid">
+      <div class="card">
+        <div class="card-head compact">
+          <div>
+            <span class="section-kicker">Validation</span>
+            <h2>Model Performance</h2>
+            <p>Metrics on chronological holdout.</p>
+          </div>
+        </div>
+        <div class="metric-grid" id="trustGrid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head compact">
+          <div>
+            <span class="section-kicker">Interpretation</span>
+            <h2>Feature Importance</h2>
+            <p>Relative contribution to bust prediction.</p>
+          </div>
+        </div>
+        <div class="feature-list" id="featureImportance"></div>
+      </div>
+    </div>
+
+    <div class="card method-card">
+      <div class="card-head compact">
+        <div>
+          <span class="section-kicker">Methodology</span>
+          <h2>How to read this system</h2>
+        </div>
+      </div>
+      <div class="method-grid">
+        <div class="method-step">
+          <div class="step-num">01</div>
+          <div>
+            <strong>Forecast input</strong>
+            <p>NWP fields (geopotential, moisture flux, vorticity, precipitation) are transformed into region-level features per cycle.</p>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">02</div>
+          <div>
+            <strong>Bust detection</strong>
+            <p>A calibrated classifier estimates P(bust) — probability that forecast error exceeds the historical threshold for that cell and lead.</p>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">03</div>
+          <div>
+            <strong>Confidence field</strong>
+            <p>Bust probability is inverted into an interpretable confidence value, spatially mapped at 1°×1° grid resolution.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+
 <footer class="app-footer">
-
-  <div>
-    SIH 26079 · FORECAST BUST DETECTION
-  </div>
-
-  <div>
-    BACKTESTED MODEL OUTPUT · NOT LIVE FORECAST DATA
-  </div>
-
+  <div>© NCMRWF · Reliability Intelligence · v2.4</div>
+  <div>Backtested model output · Not for operational dissemination</div>
 </footer>
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
 <script src="js/api.js"></script>
 <script src="js/map.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>
-
 </body>
 </html>
