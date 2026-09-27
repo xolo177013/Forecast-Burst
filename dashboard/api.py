@@ -420,6 +420,23 @@ def load_data():
     print("=" * 72)
     print()
 
+# ============================================================
+# ADD to api.py: paste near the other endpoints
+# ============================================================
+from live_predict import run_live_verification
+
+@app.get("/live-verify")
+def live_verify(init_date: str = Query(..., description="YYYY-MM-DD, any date -- past, today, or future")):
+    """
+    REAL live inference: fetches live forecast+ensemble+truth data for the given
+    date, runs feature engineering + the saved model, and returns predicted vs.
+    actual for all 10 lead days. No cached/static data used here.
+    """
+    try:
+        results = run_live_verification(init_date, MODEL_DIR)
+    except Exception as e:
+        raise HTTPException(500, f"Live verification failed: {e}")
+    return {"init_date": init_date, "count": len(results), "results": results}
 
 # =============================================================================
 # ROOT / DASHBOARD

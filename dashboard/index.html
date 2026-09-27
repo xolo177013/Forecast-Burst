@@ -45,6 +45,7 @@
     <button class="tab" data-tab="bust"><span class="tab-ico">◆</span><span>Regional Risk</span></button>
     <button class="tab" data-tab="regions"><span class="tab-ico">◆</span><span>Error-Prone Areas</span></button>
     <button class="tab" data-tab="trust"><span class="tab-ico">◆</span><span>Model Diagnostics</span></button>
+    <button class="tab" data-tab="live"><span class="tab-ico">◆</span><span>Live Verification</span></button>
   </nav>
 
   <div class="topbar-right">
@@ -312,6 +313,34 @@
             <p>Bust probability is inverted into an interpretable confidence value, spatially mapped at 1°×1° grid resolution.</p>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADD as a 5th view section -->
+  <section class="view" id="view-live">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <span class="section-kicker">Real-Time Model Test</span>
+          <h2>Pick a Date — See the Model Predict, Then Check Reality</h2>
+          <p>Enter any date. The system pulls the real forecast+ensemble issued that day, runs it through
+          the live model, and shows predicted bust risk for Day 1–10 next to what actually happened
+          (once that outcome exists).</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <div>
+            <label style="display:block;font-size:10px;color:var(--text-4);margin-bottom:6px;">INIT DATE</label>
+            <input type="date" id="liveDateInput" style="height:38px;padding:0 10px;border:1px solid var(--border-strong);border-radius:8px;">
+          </div>
+          <button id="liveRunBtn" style="height:38px;padding:0 18px;background:var(--accent);color:#fff;border-radius:8px;font-weight:600;">Run Verification</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="region-table" id="liveTable">
+          <thead><tr><th>Region</th><th>Lead Day</th><th>Predicted P(bust)</th><th>Predicted Confidence</th><th>Actual Outcome</th></tr></thead>
+          <tbody id="liveTableBody"><tr><td colspan="5" style="padding:24px;color:var(--text-3)">Pick a date and run.</td></tr></tbody>
+        </table>
       </div>
     </div>
   </section>
