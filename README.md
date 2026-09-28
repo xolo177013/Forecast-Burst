@@ -1,7 +1,7 @@
 ---
 title: Reliability Intelligence
 emoji: 🌦️
-sdk: docker
-app_port: 7860
+sdk: gradio
+app_file: app.py
+python_version: "3.11"
 ---
-Forecast bust detection dashboard.
