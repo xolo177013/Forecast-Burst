@@ -2,6 +2,7 @@ import gradio as gr
 import os
 from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
 def get_status():
@@ -12,6 +13,7 @@ def get_status():
         "model_dir": os.getenv("MODEL_DIR", "/app/models")
     }
 
+# Build Gradio UI
 with gr.Blocks(title="Forecast Bust Detection") as demo:
     gr.Markdown("# SIH 26079 — Forecast Bust Detection API")
     gr.Markdown("Reliability Intelligence Dashboard & API Interface")
@@ -22,5 +24,6 @@ with gr.Blocks(title="Forecast Bust Detection") as demo:
         
     check_btn.click(fn=get_status, inputs=[], outputs=status_output)
 
+# Disable SSR explicitly to prevent Node.js proxy crashes on HF Spaces
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860, ssr=False)
