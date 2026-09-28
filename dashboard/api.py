@@ -152,7 +152,7 @@ OPTIONAL_CONFIDENCE_COLUMNS = {
 }
 # ===== In api.py: REPLACE the old /live-verify block, /bust-probability and /error-prone-regions with these =====
 from pydantic import BaseModel
-from live_predict import run_live_verification, predict_manual
+from dashboard.live_predict import run_live_verification, predict_manual
 
 @app.get("/live-verify")
 def live_verify(init_date: str = Query(...)):
