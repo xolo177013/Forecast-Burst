@@ -1,5 +1,6 @@
+gradio
 fastapi
-uvicorn[standard]
+uvicorn
 pandas
 pyarrow
 numpy
