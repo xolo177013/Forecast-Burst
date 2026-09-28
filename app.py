@@ -12,8 +12,7 @@ def get_status():
         "model_dir": os.getenv("MODEL_DIR", "/app/models")
     }
 
-# Pass ssr=False directly into gr.Blocks initialization
-with gr.Blocks(title="Forecast Bust Detection", ssr=False) as demo:
+with gr.Blocks(title="Forecast Bust Detection") as demo:
     gr.Markdown("# SIH 26079 — Forecast Bust Detection API")
     gr.Markdown("Reliability Intelligence Dashboard & API Interface")
     
@@ -23,6 +22,5 @@ with gr.Blocks(title="Forecast Bust Detection", ssr=False) as demo:
         
     check_btn.click(fn=get_status, inputs=[], outputs=status_output)
 
-# Only launch locally during local testing; HF Space hosts `demo` automatically
 if __name__ == "__main__":
     demo.launch()
