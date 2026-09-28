@@ -2,8 +2,13 @@ import gradio as gr
 
 from dashboard.api import app as fastapi_app
 
+
+def status():
+    return "Forecast Bust Detection API"
+
+
 demo = gr.Interface(
-    fn=lambda: "Forecast Bust Detection API",
+    fn=status,
     inputs=[],
     outputs="text",
 )
