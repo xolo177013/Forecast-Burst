@@ -30,3 +30,5 @@ Thumbs.db
 
 # Logs
 *.log
+models/eval_curves.png
+models/shap_summary.png
