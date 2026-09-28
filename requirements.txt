@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+pandas
+pyarrow
+numpy
+scipy
+lightgbm
+xarray
+zarr
+dask
+gcsfs
+python-dotenv
+pydantic

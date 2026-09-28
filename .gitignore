@@ -11,14 +11,14 @@ venv/
 .env/
 
 # Data / model artifacts
-*.parquet
+
 *.zarr
 *.nc
 *.grib
 *.grib2
 
 # Local model directory
-models/
+
 
 # IDE
 .vscode/
