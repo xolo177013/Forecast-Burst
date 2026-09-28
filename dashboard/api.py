@@ -150,7 +150,51 @@ REQUIRED_CONFIDENCE_COLUMNS = {
 OPTIONAL_CONFIDENCE_COLUMNS = {
     "top_reasons",
 }
+# ===== In api.py: REPLACE the old /live-verify block, /bust-probability and /error-prone-regions with these =====
+from pydantic import BaseModel
+from live_predict import run_live_verification, predict_manual
 
+@app.get("/live-verify")
+def live_verify(init_date: str = Query(...)):
+    try:
+        meta, results = run_live_verification(init_date, MODEL_DIR, _confidence_df)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    return {**meta, "count": len(results), "results": results}
+
+class ManualIn(BaseModel):
+    features: dict
+
+@app.post("/predict-manual")
+def predict_manual_ep(body: ManualIn):
+    try:
+        return {"days": predict_manual(body.features, MODEL_DIR)}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/bust-probability")
+def bust_probability(region_id: str = Query(...), lead_day: Optional[int] = Query(None, ge=1, le=10),
+                     init_date: Optional[str] = Query(None)):
+    df = _confidence_df[_confidence_df["region_id"].astype(str) == str(region_id)]
+    if init_date: df = df[df["init_date"] == pd.to_datetime(init_date)]
+    if lead_day is not None: df = df[df["lead_day"] == lead_day]
+    if df.empty: raise HTTPException(404, "No data for this region/date.")
+    t = (df.groupby("lead_day").agg(mean_bust_probability=("bust_probability","mean"),
+         mean_confidence=("forecast_confidence","mean")).reset_index().sort_values("lead_day"))
+    return {"region_id": str(region_id), "by_lead_day": t.to_dict(orient="records")}
+
+@app.get("/error-prone-regions")
+def error_prone_regions(top_n: int = Query(20, ge=1, le=992), init_date: Optional[str] = Query(None)):
+    if init_date:
+        d = _confidence_df[_confidence_df["init_date"] == pd.to_datetime(init_date)]
+        if d.empty: raise HTTPException(404, "No data for that date.")
+        g = (d.groupby(["region_id","lat_center","lon_center"]).agg(actual_bust_rate=("bust_label","mean"),
+             mean_bust_probability=("bust_probability","mean"), mean_pred_error=("pred_error","mean"))
+             .reset_index().sort_values("mean_bust_probability", ascending=False).head(top_n))
+        return {"count": len(g), "regions": g.to_dict(orient="records")}
+    out = _region_summary_df.head(top_n).copy()
+    return {"count": len(out), "regions": out.to_dict(orient="records")}
+# (also delete the old duplicate /live-verify and the old two endpoints above)
 
 # =============================================================================
 # STARTUP DATA LOADING
@@ -420,23 +464,6 @@ def load_data():
     print("=" * 72)
     print()
 
-# ============================================================
-# ADD to api.py: paste near the other endpoints
-# ============================================================
-from live_predict import run_live_verification
-
-@app.get("/live-verify")
-def live_verify(init_date: str = Query(..., description="YYYY-MM-DD, any date -- past, today, or future")):
-    """
-    REAL live inference: fetches live forecast+ensemble+truth data for the given
-    date, runs feature engineering + the saved model, and returns predicted vs.
-    actual for all 10 lead days. No cached/static data used here.
-    """
-    try:
-        results = run_live_verification(init_date, MODEL_DIR)
-    except Exception as e:
-        raise HTTPException(500, f"Live verification failed: {e}")
-    return {"init_date": init_date, "count": len(results), "results": results}
 
 # =============================================================================
 # ROOT / DASHBOARD
@@ -729,132 +756,7 @@ def confidence_map(
     }
 
 
-# =============================================================================
-# BUST PROBABILITY / REGION TREND
-# =============================================================================
-
-@app.get("/bust-probability")
-def bust_probability(
-    region_id: str = Query(...),
-    lead_day: Optional[int] = Query(
-        None,
-        ge=1,
-        le=10,
-    ),
-):
-    """
-    Return historical mean bust probability/confidence
-    across lead days for a region.
-    """
-
-    if _confidence_df is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Confidence data is not loaded.",
-        )
-
-    df = _confidence_df[
-        _confidence_df["region_id"].astype(str)
-        == str(region_id)
-    ]
-
-    if df.empty:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No data for region_id={region_id}.",
-        )
-
-    # Keep the original behavior:
-    # if lead_day is supplied, restrict the data.
-    if lead_day is not None:
-        df = df[df["lead_day"] == lead_day]
-
-    if df.empty:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"No data for region_id={region_id}, "
-                f"lead_day={lead_day}."
-            ),
-        )
-
-    trend = (
-        df.groupby("lead_day")
-        .agg(
-            mean_bust_probability=(
-                "bust_probability",
-                "mean",
-            ),
-            mean_confidence=(
-                "forecast_confidence",
-                "mean",
-            ),
-        )
-        .reset_index()
-        .sort_values("lead_day")
-    )
-
-    return {
-        "region_id": str(region_id),
-        "by_lead_day": trend.to_dict(
-            orient="records"
-        ),
-    }
-
-
-# =============================================================================
-# ERROR-PRONE REGIONS
-# =============================================================================
-
-# =============================================================================
-# ERROR-PRONE REGIONS
-# =============================================================================
-
-@app.get("/error-prone-regions")
-def error_prone_regions(
-    top_n: int = Query(
-        20,
-        ge=1,
-        le=992,
-    ),
-):
-    """
-    Return the highest-ranked historically error-prone regions.
-    Enriches the response with lat/lon centers when missing.
-    """
-
-    if (
-        _region_summary_df is None
-        or _region_summary_df.empty
-    ):
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "error_prone_regions.parquet is not available "
-                "or contains no rows."
-            ),
-        )
-
-    out = _region_summary_df.head(top_n).copy()
-
-    # Add lat/lon columns if they are missing — the dashboard table
-    # expects them for the "Lat / Lon" column.
-    if "lat_center" not in out.columns or "lon_center" not in out.columns:
-        centers = (
-            _confidence_df[["region_id", "lat_center", "lon_center"]]
-            .drop_duplicates("region_id")
-        )
-        # Avoid duplicate columns if one of them exists already
-        drop_cols = [c for c in ("lat_center", "lon_center") if c in out.columns]
-        if drop_cols:
-            out = out.drop(columns=drop_cols)
-        out = out.merge(centers, on="region_id", how="left")
-
-    return {
-        "count": len(out),
-        "regions": out.to_dict(orient="records"),
-    }
-# =============================================================================
+#=============================================================================
 # EXPLAIN
 # =============================================================================
 

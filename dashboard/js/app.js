@@ -74,7 +74,7 @@ async function selectLeadDay(day) {
   updateDayLabels(day);
 
   try {
-    const data = await apiGet("/confidence-map", { lead_day: day });
+    const data = await apiGet("/confidence-map", { lead_day: day, ...(currentDate ? { init_date: currentDate } : {}) });
     if (!data.regions || !data.regions.length) {
       console.warn("[app] no regions for day", day);
       return;
@@ -149,8 +149,8 @@ async function loadNationalTrend() {
   const points = [];
   for (let d = 1; d <= 10; d++) {
     try {
-      const data = confidenceCache[d] || (await apiGet("/confidence-map", { lead_day: d })).regions;
-      confidenceCache[d] = data;
+      const resp = await apiGet("/confidence-map", { lead_day: d });
+      const data = resp.regions; confidenceCache[d] = data;
       if (!data?.length) continue;
       const avg = data.reduce((s, r) => s + Number(r.forecast_confidence || 0), 0) / data.length;
       points.push({ x: d, y: avg });
@@ -158,6 +158,8 @@ async function loadNationalTrend() {
   }
   renderTrendChart(points);
 }
+
+let currentDate = null;  // null = latest available
 
 /* ---------- region select ---------------------------------- */
 function populateRegionSelect() {
