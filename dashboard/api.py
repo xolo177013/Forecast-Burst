@@ -42,8 +42,6 @@ from typing import Optional
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.compute as pc
-import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
@@ -177,47 +175,35 @@ def load_confidence_light(path: Path) -> pd.DataFrame:
     return df
 
 
-_top_reasons_dataset = None
+# Per-date explanation files written by split_reasons.py:
+#   models/reasons/2021-06-20.parquet  (region_id, lead_day, top_reasons)
+# Each file is tiny (~10k rows), so /explain never scans the big table.
+REASONS_DIR = MODEL_DIR / "reasons"
 
 
-def _get_dataset():
-    global _top_reasons_dataset
-    if _top_reasons_dataset is None:
-        _top_reasons_dataset = ds.dataset(CONF_PATH, format="parquet")
-    return _top_reasons_dataset
-
-
-@lru_cache(maxsize=1024)
-def _read_top_reasons_cached(region_id: str, lead_day: int, date_key: str):
-    """Read top_reasons for ONE region / lead / date straight from parquet."""
+@lru_cache(maxsize=8)
+def _load_reasons_for_date(date_key: str):
+    """Return {(region_id, lead_day): top_reasons} for one forecast date."""
+    f = REASONS_DIR / f"{date_key}.parquet"
+    if not f.exists():
+        return None
     try:
-        dset = _get_dataset()
-        if "top_reasons" not in dset.schema.names:
-            return None
-
-        tbl = dset.to_table(
-            columns=["init_date", "top_reasons"],
-            filter=(
-                (pc.field("region_id").cast(pa.string()) == region_id)
-                & (pc.field("lead_day") == lead_day)
-            ),
-        )
-        d = tbl.to_pandas(date_as_object=False)
-        if d.empty:
-            return None
-
-        d["init_date"] = pd.to_datetime(d["init_date"])
-        d = d[d["init_date"] == pd.to_datetime(date_key)]
-        return d["top_reasons"].iloc[0] if not d.empty else None
-
+        d = pd.read_parquet(f, columns=["region_id", "lead_day", "top_reasons"])
+        return {
+            (str(r), int(l)): v
+            for r, l, v in zip(d["region_id"], d["lead_day"], d["top_reasons"])
+        }
     except Exception as exc:
-        print("top_reasons read failed:", exc)
+        print("reasons read failed:", exc)
         return None
 
 
 def read_top_reasons(region_id, lead_day, init_date):
     date_key = str(pd.to_datetime(init_date).date())
-    return _read_top_reasons_cached(str(region_id), int(lead_day), date_key)
+    table = _load_reasons_for_date(date_key)
+    if not table:
+        return None
+    return table.get((str(region_id), int(lead_day)))
 
 
 def _records(df: pd.DataFrame) -> list:
@@ -371,6 +357,18 @@ def load_data():
     print(f"Date range      : {date_min} → {date_max}")
     print("=" * 72)
     print()
+
+    if not REASONS_DIR.exists():
+        print("WARNING: models/reasons/ not found - /explain will return no reasons.")
+        print("         Run split_reasons.py once and commit the output.")
+
+    # Give temporary load-time memory back to the OS
+    import gc
+    gc.collect()
+    try:
+        pa.default_memory_pool().release_unused()
+    except Exception:
+        pass
 
 
 @asynccontextmanager
