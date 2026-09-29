@@ -1,5 +1,7 @@
 fastapi
 uvicorn
+gradio
+spaces
 pandas
 pyarrow
 numpy
