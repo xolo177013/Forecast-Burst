@@ -2,9 +2,15 @@
    APP STATE + BOOT
    ============================================================ */
 
-let currentLeadDay = 5;
+let currentLeadDay = 1;
 let confidenceCache = {};
 let allRegionIds = [];
+let currentDate = null;  // null = latest available (may be set by extras.js)
+
+/* Extra query params for the selected forecast date */
+function dateParam() {
+  return currentDate ? { init_date: currentDate } : {};
+}
 
 /* ---------- TABS ------------------------------------------- */
 function initTabs() {
@@ -74,7 +80,7 @@ async function selectLeadDay(day) {
   updateDayLabels(day);
 
   try {
-    const data = await apiGet("/confidence-map", { lead_day: day, ...(currentDate ? { init_date: currentDate } : {}) });
+    const data = await apiGet("/confidence-map", { lead_day: day, ...dateParam() });
     if (!data.regions || !data.regions.length) {
       console.warn("[app] no regions for day", day);
       return;
@@ -84,8 +90,13 @@ async function selectLeadDay(day) {
     updateConfidenceUI(data.regions);
 
     if (allRegionIds.length === 0) {
+      // First load: builds the dropdown and loads region detail itself
       allRegionIds = data.regions.map(r => r.region_id).sort();
       populateRegionSelect();
+    } else {
+      // Lead day changed: refresh the explanation for the selected region
+      const sel = document.getElementById("regionSelect");
+      if (sel && sel.value) loadExplanation(sel.value);
     }
   } catch (err) {
     console.error("[app] confidence-map failed:", err);
@@ -149,7 +160,7 @@ async function loadNationalTrend() {
   const points = [];
   for (let d = 1; d <= 10; d++) {
     try {
-      const resp = await apiGet("/confidence-map", { lead_day: d });
+      const resp = await apiGet("/confidence-map", { lead_day: d, ...dateParam() });
       const data = resp.regions; confidenceCache[d] = data;
       if (!data?.length) continue;
       const avg = data.reduce((s, r) => s + Number(r.forecast_confidence || 0), 0) / data.length;
@@ -158,8 +169,6 @@ async function loadNationalTrend() {
   }
   renderTrendChart(points);
 }
-
-let currentDate = null;  // null = latest available
 
 /* ---------- region select ---------------------------------- */
 function populateRegionSelect() {
@@ -175,20 +184,29 @@ function populateRegionSelect() {
   if (allRegionIds.length) loadRegionDetail(allRegionIds[0]);
 }
 
-async function loadRegionDetail(regionId) {
+async function loadExplanation(regionId) {
   if (!regionId) return;
   try {
-    const trend = await apiGet("/bust-probability", { region_id: regionId });
-    renderRegionChart(trend.by_lead_day);
-  } catch (e) { console.error("region probability failed:", e); }
-
-  try {
-    const exp = await apiGet("/explain", { region_id: regionId, lead_day: currentLeadDay });
+    const exp = await apiGet("/explain", {
+      region_id: regionId,
+      lead_day: currentLeadDay,
+      ...dateParam(),
+    });
     renderExplanation(exp);
   } catch (e) {
     const box = document.getElementById("reasonBox");
     if (box) box.innerHTML = `<div class="exp-empty">No explanation available for this region and lead day.</div>`;
   }
+}
+
+async function loadRegionDetail(regionId) {
+  if (!regionId) return;
+  try {
+    const trend = await apiGet("/bust-probability", { region_id: regionId, ...dateParam() });
+    renderRegionChart(trend.by_lead_day);
+  } catch (e) { console.error("region probability failed:", e); }
+
+  await loadExplanation(regionId);
 }
 
 /* ---------- explanation panel ------------------------------ */
@@ -350,12 +368,39 @@ async function boot() {
   buildLeadStrip();
   startClock();
 
-  try {
-    await apiGet("/health");
-    setConn(true, "Live · model available");
-  } catch (e) {
+  // Free hosting can sleep; wait up to ~60s for the server to wake up
+  let alive = false;
+  for (let i = 0; i < 12 && !alive; i++) {
+    try {
+      await apiGet("/health");
+      alive = true;
+    } catch (e) {
+      setConn(false, i === 0 ? "Waking server…" : `Waking server… (${i * 5}s)`);
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+  if (!alive) {
     setConn(false, "API unreachable");
     return;
+  }
+    setConn(true, "Live · model available");
+
+  // ---- default forecast date ----
+  const DEFAULT_DATE = "2021-06-20";   // YYYY-MM-DD
+  try {
+    const fd = await apiGet("/forecast-dates");
+    currentDate = fd.dates.includes(DEFAULT_DATE) ? DEFAULT_DATE : fd.latest;
+
+    const input = document.getElementById("dateInput");
+    if (input) {
+      input.min = fd.dates[0];
+      input.max = fd.latest;
+      input.value = currentDate;
+    }
+    const note = document.getElementById("dateNote");
+    if (note) note.textContent = `Showing forecasts issued on ${currentDate}`;
+  } catch (e) {
+    console.warn("forecast-dates failed, using latest:", e);
   }
 
   await selectLeadDay(currentLeadDay);
