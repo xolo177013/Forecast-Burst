@@ -11,4 +11,3 @@ dask
 gcsfs
 python-dotenv
 pydantic
-huggingface_hub==0.24.6
